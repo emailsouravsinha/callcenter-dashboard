@@ -7,7 +7,9 @@ const dbConfig = {
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'callcenter_ai',
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  ...(process.env.DB_SSL === 'true' && {
+    ssl: { rejectUnauthorized: false }
+  }),
 }
 
 // Create connection pool for better performance

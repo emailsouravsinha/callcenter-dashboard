@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { testConnection, getStats } from '@/lib/database'
+import { testConnection, getDashboardStats } from '@/lib/database'
 
 export async function GET() {
   try {
@@ -18,7 +18,7 @@ export async function GET() {
     }
 
     // Try to fetch some stats
-    const stats = await getStats()
+    const stats = await getDashboardStats()
 
     return NextResponse.json({
       success: true,

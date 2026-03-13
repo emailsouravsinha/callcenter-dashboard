@@ -1,0 +1,176 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { User, Phone, Mail, Building, Calendar, TrendingUp } from 'lucide-react'
+
+interface Contact {
+  id: number
+  name: string
+  company: string
+  phone: string
+  email: string
+  total_calls: number
+  status: string
+  last_contact_date: string
+}
+
+export default function ContactsPage() {
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  useEffect(() => {
+    fetchContacts()
+  }, [])
+
+  const fetchContacts = async () => {
+    try {
+      const response = await fetch('/api/contacts')
+      if (response.ok) {
+        const data = await response.json()
+        setContacts(data.contacts || [])
+      }
+    } catch (error) {
+      console.error('Error fetching contacts:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredContacts = contacts.filter(contact =>
+    contact.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contact.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contact.phone?.includes(searchTerm) ||
+    contact.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-10 bg-gray-200 rounded mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="h-48 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-2">Contacts</h1>
+        <p className="text-gray-600">Manage your customer relationships</p>
+      </div>
+
+      {/* Search */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search contacts by name, company, phone, or email..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow p-4">
+          <p className="text-sm text-gray-600 mb-1">Total Contacts</p>
+          <p className="text-2xl font-bold">{contacts.length}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <p className="text-sm text-gray-600 mb-1">Active</p>
+          <p className="text-2xl font-bold text-green-600">
+            {contacts.filter(c => c.status === 'active').length}
+          </p>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <p className="text-sm text-gray-600 mb-1">Total Calls</p>
+          <p className="text-2xl font-bold">
+            {contacts.reduce((sum, c) => sum + (c.total_calls || 0), 0)}
+          </p>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <p className="text-sm text-gray-600 mb-1">Avg Calls/Contact</p>
+          <p className="text-2xl font-bold">
+            {contacts.length > 0 
+              ? (contacts.reduce((sum, c) => sum + (c.total_calls || 0), 0) / contacts.length).toFixed(1)
+              : 0
+            }
+          </p>
+        </div>
+      </div>
+
+      {/* Contact Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredContacts.map((contact) => (
+          <div key={contact.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <User className="w-6 h-6 text-blue-600" />
+              </div>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                contact.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+              }`}>
+                {contact.status}
+              </span>
+            </div>
+
+            <h3 className="font-semibold text-lg mb-1">{contact.name}</h3>
+            
+            {contact.company && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                <Building className="w-4 h-4" />
+                <span>{contact.company}</span>
+              </div>
+            )}
+
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Phone className="w-4 h-4" />
+                <span>{contact.phone}</span>
+              </div>
+              {contact.email && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Mail className="w-4 h-4" />
+                  <span className="truncate">{contact.email}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>{contact.total_calls || 0} calls</span>
+                </div>
+                {contact.last_contact_date && (
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <Calendar className="w-4 h-4" />
+                    <span>{new Date(contact.last_contact_date).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {filteredContacts.length === 0 && (
+        <div className="text-center py-12">
+          <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500">
+            {searchTerm ? 'No contacts found matching your search' : 'No contacts yet'}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
