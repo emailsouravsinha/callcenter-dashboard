@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Calendar as CalendarIcon, Clock, User, Phone, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
 
 interface Appointment {
   id: number
@@ -91,124 +92,126 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Calendar & Appointments</h1>
-        <p className="text-gray-600">Manage scheduled appointments and meetings</p>
-      </div>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-2">Calendar & Appointments</h1>
+          <p className="text-gray-600">Manage scheduled appointments and meetings</p>
+        </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600 mb-1">Total</p>
-          <p className="text-2xl font-bold">{stats.total}</p>
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow p-4">
+            <p className="text-sm text-gray-600 mb-1">Total</p>
+            <p className="text-2xl font-bold">{stats.total}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4">
+            <p className="text-sm text-gray-600 mb-1">Scheduled</p>
+            <p className="text-2xl font-bold text-blue-600">{stats.scheduled}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4">
+            <p className="text-sm text-gray-600 mb-1">Completed</p>
+            <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4">
+            <p className="text-sm text-gray-600 mb-1">Cancelled</p>
+            <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4">
+            <p className="text-sm text-gray-600 mb-1">No-Show</p>
+            <p className="text-2xl font-bold text-orange-600">{stats.noShow}</p>
+          </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600 mb-1">Scheduled</p>
-          <p className="text-2xl font-bold text-blue-600">{stats.scheduled}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600 mb-1">Completed</p>
-          <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600 mb-1">Cancelled</p>
-          <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600 mb-1">No-Show</p>
-          <p className="text-2xl font-bold text-orange-600">{stats.noShow}</p>
-        </div>
-      </div>
 
-      {/* Filters */}
-      <div className="mb-6 flex gap-2">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-        >
-          All ({stats.total})
-        </button>
-        <button
-          onClick={() => setFilter('scheduled')}
-          className={`px-4 py-2 rounded-lg ${filter === 'scheduled' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-        >
-          Scheduled ({stats.scheduled})
-        </button>
-        <button
-          onClick={() => setFilter('completed')}
-          className={`px-4 py-2 rounded-lg ${filter === 'completed' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-        >
-          Completed ({stats.completed})
-        </button>
-        <button
-          onClick={() => setFilter('cancelled')}
-          className={`px-4 py-2 rounded-lg ${filter === 'cancelled' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-        >
-          Cancelled ({stats.cancelled})
-        </button>
-      </div>
+        {/* Filters */}
+        <div className="mb-6 flex gap-2">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-2 rounded-lg ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+          >
+            All ({stats.total})
+          </button>
+          <button
+            onClick={() => setFilter('scheduled')}
+            className={`px-4 py-2 rounded-lg ${filter === 'scheduled' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+          >
+            Scheduled ({stats.scheduled})
+          </button>
+          <button
+            onClick={() => setFilter('completed')}
+            className={`px-4 py-2 rounded-lg ${filter === 'completed' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+          >
+            Completed ({stats.completed})
+          </button>
+          <button
+            onClick={() => setFilter('cancelled')}
+            className={`px-4 py-2 rounded-lg ${filter === 'cancelled' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+          >
+            Cancelled ({stats.cancelled})
+          </button>
+        </div>
 
-      {/* Appointments List */}
-      <div className="space-y-4">
-        {filteredAppointments.map((appointment) => (
-          <div key={appointment.id} className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4 flex-1">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  {getStatusIcon(appointment.status)}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-lg">{appointment.service_type}</h3>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                      {appointment.status.replace('_', ' ')}
-                    </span>
+        {/* Appointments List */}
+        <div className="space-y-4">
+          {filteredAppointments.map((appointment) => (
+            <div key={appointment.id} className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4 flex-1">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    {getStatusIcon(appointment.status)}
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                    <div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                        <CalendarIcon className="w-4 h-4" />
-                        <span>{new Date(appointment.appointment_date).toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <User className="w-4 h-4" />
-                        <span>{appointment.contact_name}</span>
-                      </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-lg">{appointment.service_type}</h3>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
+                        {appointment.status.replace('_', ' ')}
+                      </span>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                        <Phone className="w-4 h-4" />
-                        <span>{appointment.contact_phone}</span>
-                      </div>
-                      {appointment.contact_email && (
-                        <div className="text-sm text-gray-600">
-                          {appointment.contact_email}
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                          <CalendarIcon className="w-4 h-4" />
+                          <span>{new Date(appointment.appointment_date).toLocaleString()}</span>
                         </div>
-                      )}
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <User className="w-4 h-4" />
+                          <span>{appointment.contact_name}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                          <Phone className="w-4 h-4" />
+                          <span>{appointment.contact_phone}</span>
+                        </div>
+                        {appointment.contact_email && (
+                          <div className="text-sm text-gray-600">
+                            {appointment.contact_email}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {appointment.notes && (
-                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-700">{appointment.notes}</p>
-                    </div>
-                  )}
+                    {appointment.notes && (
+                      <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-700">{appointment.notes}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        {filteredAppointments.length === 0 && (
-          <div className="text-center py-12">
-            <CalendarIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No appointments found</p>
-          </div>
-        )}
+          {filteredAppointments.length === 0 && (
+            <div className="text-center py-12">
+              <CalendarIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No appointments found</p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   )
 }
 
