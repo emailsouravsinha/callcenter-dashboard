@@ -8,6 +8,16 @@ const dbConfig = {
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'callcenter_saas',
+  ...(process.env.DB_SSL === 'true' && { ssl: { rejectUnauthorized: false } }),
+}
+
+async function getConnection() {
+  try {
+    return await mysql.createConnection(dbConfig)
+  } catch (error: any) {
+    console.error('Database connection failed:', error.message)
+    throw new Error(`Database connection failed: ${error.code || error.message}. Check your DB_HOST, DB_USER, and DB_PASSWORD in .env.local`)
+  }
 }
 
 // GET - List organizations
@@ -26,7 +36,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
 
     const [orgs] = await connection.execute(`
       SELECT o.id, o.name, o.slug, o.status, o.created_at,
@@ -40,9 +50,10 @@ export async function GET(request: NextRequest) {
     connection.end()
 
     return NextResponse.json({ organizations: orgs })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get organizations error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const msg = error.message?.includes('Database connection') ? error.message : 'Internal server error'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
@@ -68,7 +79,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name and slug are required' }, { status: 400 })
     }
 
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
 
     // Check if slug exists
     const [existing] = await connection.execute('SELECT id FROM organizations WHERE slug = ?', [slug])
@@ -89,8 +100,9 @@ export async function POST(request: NextRequest) {
       success: true,
       organization: { id: orgId, name, slug, status: 'active' },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create organization error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const msg = error.message?.includes('Database connection') ? error.message : 'Internal server error'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

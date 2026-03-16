@@ -8,6 +8,16 @@ const dbConfig = {
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'callcenter_saas',
+  ...(process.env.DB_SSL === 'true' && { ssl: { rejectUnauthorized: false } }),
+}
+
+async function getConnection() {
+  try {
+    return await mysql.createConnection(dbConfig)
+  } catch (error: any) {
+    console.error('Database connection failed:', error.message)
+    throw new Error(`Database connection failed: ${error.code || error.message}. Check your DB_HOST, DB_USER, and DB_PASSWORD in .env.local`)
+  }
 }
 
 // GET - List phone mappings
@@ -21,7 +31,7 @@ export async function GET(request: NextRequest) {
     const decoded = verifyToken(token)
     if (!decoded) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
     const [mappings] = await connection.execute(`
       SELECT dm.id, dm.organization_id, dm.phone_number, dm.vector_store_id,
              dm.is_active, dm.created_at, o.name as org_name
@@ -32,9 +42,10 @@ export async function GET(request: NextRequest) {
     connection.end()
 
     return NextResponse.json({ mappings })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get phone mappings error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const msg = error.message?.includes('Database connection') ? error.message : 'Internal server error'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
@@ -57,7 +68,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization, phone number, and vector store ID are required' }, { status: 400 })
     }
 
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
 
     // Check if phone number already mapped
     const [existing] = await connection.execute(
@@ -80,9 +91,10 @@ export async function POST(request: NextRequest) {
       success: true,
       mapping: { id: mappingId, organizationId, phoneNumber, vectorStoreId },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create phone mapping error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const msg = error.message?.includes('Database connection') ? error.message : 'Internal server error'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
@@ -102,13 +114,14 @@ export async function DELETE(request: NextRequest) {
     const { mappingId } = await request.json()
     if (!mappingId) return NextResponse.json({ error: 'Mapping ID required' }, { status: 400 })
 
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
     await connection.execute('UPDATE doc_mappings SET is_active = FALSE WHERE id = ?', [mappingId])
     connection.end()
 
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete phone mapping error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const msg = error.message?.includes('Database connection') ? error.message : 'Internal server error'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

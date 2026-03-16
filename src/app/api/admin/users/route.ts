@@ -11,6 +11,16 @@ const dbConfig = {
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'callcenter_saas',
+  ...(process.env.DB_SSL === 'true' && { ssl: { rejectUnauthorized: false } }),
+}
+
+async function getConnection() {
+  try {
+    return await mysql.createConnection(dbConfig)
+  } catch (error: any) {
+    console.error('Database connection failed:', error.message)
+    throw new Error(`Database connection failed: ${error.code || error.message}. Check your DB_HOST, DB_USER, and DB_PASSWORD in .env.local`)
+  }
 }
 
 // GET - List users (filtered by org for non-admin)
@@ -29,7 +39,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
 
     // Platform admin (orgId 0) sees all users, org users see only their org
     const isAdmin = decoded.organizationId === 0 || decoded.role === 'owner'
@@ -58,9 +68,10 @@ export async function GET(request: NextRequest) {
     connection.end()
 
     return NextResponse.json({ users })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get users error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const msg = error.message?.includes('Database connection') ? error.message : 'Internal server error'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
@@ -86,7 +97,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
     }
 
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
 
     // Check if email already exists
     const [existing] = await connection.execute('SELECT id FROM users WHERE email = ?', [email])
@@ -131,9 +142,10 @@ export async function POST(request: NextRequest) {
       user: { id: userId, email, firstName, lastName, role, organizationId },
       tempPassword, // Return so admin can share manually if email fails
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create user error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const msg = error.message?.includes('Database connection') ? error.message : 'Internal server error'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
@@ -159,13 +171,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 })
     }
 
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
     await connection.execute('UPDATE organization_users SET is_active = FALSE WHERE user_id = ?', [userId])
     connection.end()
 
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete user error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const msg = error.message?.includes('Database connection') ? error.message : 'Internal server error'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
