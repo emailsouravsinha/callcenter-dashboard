@@ -1,0 +1,884 @@
+{
+  "testSuite": {
+    "name": "Call Center AI SaaS - Test Cases",
+    "version": "1.0.0",
+    "date": "2026-03-12",
+    "application": "Call Center AI Analytics Dashboard",
+    "environment": "Multi-Tenant SaaS with Twilio Integration",
+    "totalTestCases": 50,
+    "categories": [
+      "System Setup",
+      "Authentication & Multi-Tenancy",
+      "Call Handling",
+      "Dashboard",
+      "API",
+      "Database",
+      "Performance",
+      "Security"
+    ],
+    "testCases": [
+      {
+        "id": "TC-001",
+        "category": "System Setup",
+        "title": "Database Connection",
+        "objective": "Verify database connection is established",
+        "steps": [
+          "Start the application",
+          "Check database connection logs",
+          "Verify MySQL connection pool is active"
+        ],
+        "expectedResult": "Connection successful, no errors in logs",
+        "priority": "Critical",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-002",
+        "category": "System Setup",
+        "title": "Environment Variables",
+        "objective": "Verify all required environment variables are set",
+        "steps": [
+          "Check .env.local file exists",
+          "Verify DB_HOST, DB_USER, DB_PASSWORD, DB_NAME are set",
+          "Verify ORGANIZATION_ID is set",
+          "Verify OpenAI API key is configured"
+        ],
+        "expectedResult": "All variables present and valid",
+        "priority": "Critical",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-003",
+        "category": "System Setup",
+        "title": "API Health Check",
+        "objective": "Verify API health endpoint responds",
+        "steps": [
+          "Call GET /api/health",
+          "Check response status code",
+          "Verify response contains system status"
+        ],
+        "expectedResult": "Status 200, response shows OK",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-004",
+        "category": "Authentication & Multi-Tenancy",
+        "title": "Organization Isolation",
+        "objective": "Verify data isolation between organizations",
+        "steps": [
+          "Set ORGANIZATION_ID=1 (Acme Corporation)",
+          "Fetch calls from /api/data",
+          "Verify only Acme's calls are returned",
+          "Change ORGANIZATION_ID=2 (TechStart Inc)",
+          "Fetch calls again",
+          "Verify only TechStart's calls are returned"
+        ],
+        "expectedResult": "Each org sees only their data",
+        "priority": "Critical",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-005",
+        "category": "Authentication & Multi-Tenancy",
+        "title": "Multi-Tenant User Access",
+        "objective": "Verify users can only access their organization",
+        "steps": [
+          "Login as user from Acme Corporation",
+          "Attempt to access TechStart Inc data",
+          "Verify access denied"
+        ],
+        "expectedResult": "Access denied, 403 error",
+        "priority": "Critical",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-006",
+        "category": "Authentication & Multi-Tenancy",
+        "title": "Subscription Plan Limits",
+        "objective": "Verify subscription limits are enforced",
+        "steps": [
+          "Set organization to Starter plan (1000 calls/month)",
+          "Attempt to log 1001st call",
+          "Verify rejection or warning"
+        ],
+        "expectedResult": "Call rejected or warning shown",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-007",
+        "category": "Call Handling",
+        "title": "Incoming Call Processing",
+        "objective": "Verify incoming call is processed correctly",
+        "steps": [
+          "Make test call to Twilio number",
+          "Verify call is answered by AI",
+          "Check call is logged in database",
+          "Verify call appears in Activity Feed"
+        ],
+        "expectedResult": "Call logged, appears in dashboard",
+        "priority": "Critical",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-008",
+        "category": "Call Handling",
+        "title": "First-Time Caller Detection",
+        "objective": "Verify first-time callers are identified",
+        "steps": [
+          "Call from new phone number",
+          "AI should ask for name and email",
+          "Verify contact is created in database",
+          "Verify contact marked as first-time caller"
+        ],
+        "expectedResult": "New contact created with name/email",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-009",
+        "category": "Call Handling",
+        "title": "Returning Caller Recognition",
+        "objective": "Verify returning callers are recognized",
+        "steps": [
+          "Call from existing contact phone number",
+          "AI should greet by name (if available)",
+          "Verify call linked to existing contact",
+          "Verify call count incremented"
+        ],
+        "expectedResult": "Contact recognized, call count updated",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-010",
+        "category": "Call Handling",
+        "title": "Call Transcription",
+        "objective": "Verify call is transcribed",
+        "steps": [
+          "Make test call with speech",
+          "Wait for call to complete",
+          "Check Activity Feed for transcript",
+          "Verify transcript is accurate"
+        ],
+        "expectedResult": "Full transcript captured and displayed",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-011",
+        "category": "Call Handling",
+        "title": "AI Summary Generation",
+        "objective": "Verify AI generates call summary",
+        "steps": [
+          "Complete a call",
+          "Check Activity Feed",
+          "Verify AI Summary section populated",
+          "Verify summary is relevant to call"
+        ],
+        "expectedResult": "Summary generated and displayed",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-012",
+        "category": "Call Handling",
+        "title": "Sentiment Analysis",
+        "objective": "Verify sentiment is analyzed",
+        "steps": [
+          "Make positive call (Great service!)",
+          "Check Activity Feed sentiment tag",
+          "Make negative call (This is terrible)",
+          "Check sentiment tag"
+        ],
+        "expectedResult": "Correct sentiment detected (positive/negative)",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-013",
+        "category": "Call Handling",
+        "title": "Intent Detection",
+        "objective": "Verify call intent is detected",
+        "steps": [
+          "Call with I want to schedule an appointment",
+          "Verify intent shows Schedule Appointment",
+          "Call with What are your prices?",
+          "Verify intent shows Pricing Inquiry"
+        ],
+        "expectedResult": "Correct intents detected",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-014",
+        "category": "Call Handling",
+        "title": "Appointment Scheduling",
+        "objective": "Verify appointments can be scheduled",
+        "steps": [
+          "Call and say I'd like to book an appointment for tomorrow at 2pm",
+          "AI should confirm appointment",
+          "Check Calendar page",
+          "Verify appointment appears with correct date/time"
+        ],
+        "expectedResult": "Appointment created and visible in calendar",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-015",
+        "category": "Call Handling",
+        "title": "Callback Request",
+        "objective": "Verify callback requests are captured",
+        "steps": [
+          "Call and say Can you call me back later?",
+          "AI should confirm callback",
+          "Check Calendar page",
+          "Verify callback appears as appointment"
+        ],
+        "expectedResult": "Callback scheduled and visible",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-016",
+        "category": "Call Handling",
+        "title": "Call Hangup on Farewell",
+        "objective": "Verify call ends after farewell phrase",
+        "steps": [
+          "Make test call",
+          "Say Thank you, goodbye",
+          "Verify call disconnects",
+          "Verify call duration is recorded"
+        ],
+        "expectedResult": "Call ends gracefully, duration recorded",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-017",
+        "category": "Call Handling",
+        "title": "Knowledge Base Integration",
+        "objective": "Verify AI answers from knowledge base",
+        "steps": [
+          "Call and ask What are your company policies?",
+          "AI should answer from knowledge base",
+          "Verify answer is relevant",
+          "Check call summary includes knowledge base reference"
+        ],
+        "expectedResult": "AI answers from knowledge base",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-018",
+        "category": "Dashboard",
+        "title": "Real-Time KPI Updates",
+        "objective": "Verify KPIs update in real-time",
+        "steps": [
+          "Open Dashboard",
+          "Note current Total Calls value",
+          "Make a test call",
+          "Wait 5 seconds",
+          "Verify Total Calls incremented"
+        ],
+        "expectedResult": "KPI updates within 5 seconds",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-019",
+        "category": "Dashboard",
+        "title": "Call Volume Chart",
+        "objective": "Verify call volume chart displays data",
+        "steps": [
+          "Open Dashboard",
+          "Check Call Volume Chart",
+          "Verify data points for each hour",
+          "Verify chart is interactive"
+        ],
+        "expectedResult": "Chart displays with correct data",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-020",
+        "category": "Dashboard",
+        "title": "Recent Calls Table",
+        "objective": "Verify recent calls display correctly",
+        "steps": [
+          "Open Dashboard",
+          "Check Recent Calls Table",
+          "Verify latest calls appear first",
+          "Verify caller name, phone, duration shown"
+        ],
+        "expectedResult": "Table shows recent calls in correct order",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-021",
+        "category": "Dashboard",
+        "title": "Activity Feed Filtering",
+        "objective": "Verify activity feed filters work",
+        "steps": [
+          "Open Activity Feed",
+          "Click Answered filter",
+          "Verify only answered calls shown",
+          "Click Missed filter",
+          "Verify only missed calls shown"
+        ],
+        "expectedResult": "Filters work correctly",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-022",
+        "category": "Dashboard",
+        "title": "Contacts Page Display",
+        "objective": "Verify contacts display correctly",
+        "steps": [
+          "Open Contacts page",
+          "Verify contact cards show name, company, phone",
+          "Verify total calls count is accurate",
+          "Verify last contact date is shown"
+        ],
+        "expectedResult": "All contact info displayed correctly",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-023",
+        "category": "Dashboard",
+        "title": "Contacts Search",
+        "objective": "Verify contact search works",
+        "steps": [
+          "Open Contacts page",
+          "Search for Sarah",
+          "Verify only Sarah's contact shown",
+          "Search for +1-555",
+          "Verify contacts with that phone prefix shown"
+        ],
+        "expectedResult": "Search filters contacts correctly",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-024",
+        "category": "Dashboard",
+        "title": "Calendar View",
+        "objective": "Verify calendar displays appointments",
+        "steps": [
+          "Open Calendar page",
+          "Verify appointments listed",
+          "Check status badges (scheduled, completed, etc.)",
+          "Verify appointment details shown"
+        ],
+        "expectedResult": "Calendar shows all appointments with details",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-025",
+        "category": "Dashboard",
+        "title": "Analytics Charts",
+        "objective": "Verify analytics charts display",
+        "steps": [
+          "Open Analytics page",
+          "Verify Weekly Call Volume chart",
+          "Verify Sentiment Distribution pie chart",
+          "Verify Top Call Intents bar chart",
+          "Verify Peak Hours line chart"
+        ],
+        "expectedResult": "All charts display with data",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-026",
+        "category": "Dashboard",
+        "title": "Settings Page",
+        "objective": "Verify settings can be updated",
+        "steps": [
+          "Open Settings page",
+          "Update profile name",
+          "Click Save Changes",
+          "Verify success message",
+          "Refresh page",
+          "Verify changes persisted"
+        ],
+        "expectedResult": "Settings saved and persisted",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-027",
+        "category": "Dashboard",
+        "title": "Admin Panel - Organizations",
+        "objective": "Verify admin can view organizations",
+        "steps": [
+          "Open Admin Panel",
+          "Click Organizations tab",
+          "Verify all organizations listed",
+          "Verify plan, call count, status shown"
+        ],
+        "expectedResult": "Organizations displayed correctly",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-028",
+        "category": "Dashboard",
+        "title": "Admin Panel - Users",
+        "objective": "Verify admin can view users",
+        "steps": [
+          "Open Admin Panel",
+          "Click Users tab",
+          "Verify all users listed",
+          "Verify organization, role shown"
+        ],
+        "expectedResult": "Users displayed correctly",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-029",
+        "category": "Dashboard",
+        "title": "Admin Panel - Subscriptions",
+        "objective": "Verify admin can view subscriptions",
+        "steps": [
+          "Open Admin Panel",
+          "Click Subscriptions tab",
+          "Verify all subscriptions listed",
+          "Verify plan, amount, next billing date shown"
+        ],
+        "expectedResult": "Subscriptions displayed correctly",
+        "priority": "Medium",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-030",
+        "category": "Dashboard",
+        "title": "Admin Panel - System Health",
+        "objective": "Verify system health status",
+        "steps": [
+          "Open Admin Panel",
+          "Click System Health tab",
+          "Verify Database status shows Healthy",
+          "Verify API Server status shows Healthy",
+          "Verify metrics displayed"
+        ],
+        "expectedResult": "All systems show healthy status",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-031",
+        "category": "API",
+        "title": "GET /api/data",
+        "objective": "Verify data endpoint returns calls",
+        "steps": [
+          "Call GET /api/data",
+          "Check response status code",
+          "Verify response contains calls array",
+          "Verify each call has required fields"
+        ],
+        "expectedResult": "Status 200, calls array with valid data",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-032",
+        "category": "API",
+        "title": "GET /api/contacts",
+        "objective": "Verify contacts endpoint returns contacts",
+        "steps": [
+          "Call GET /api/contacts",
+          "Check response status code",
+          "Verify response contains contacts array",
+          "Verify each contact has required fields"
+        ],
+        "expectedResult": "Status 200, contacts array with valid data",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-033",
+        "category": "API",
+        "title": "GET /api/appointments",
+        "objective": "Verify appointments endpoint returns appointments",
+        "steps": [
+          "Call GET /api/appointments",
+          "Check response status code",
+          "Verify response contains appointments array",
+          "Verify each appointment has required fields"
+        ],
+        "expectedResult": "Status 200, appointments array with valid data",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-034",
+        "category": "API",
+        "title": "GET /api/dashboard/stats",
+        "objective": "Verify stats endpoint returns metrics",
+        "steps": [
+          "Call GET /api/dashboard/stats",
+          "Check response status code",
+          "Verify response contains all KPI metrics",
+          "Verify metrics are numeric"
+        ],
+        "expectedResult": "Status 200, all metrics present and numeric",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-035",
+        "category": "API",
+        "title": "GET /api/realtime (SSE)",
+        "objective": "Verify real-time endpoint streams data",
+        "steps": [
+          "Connect to GET /api/realtime",
+          "Verify connection established",
+          "Wait for data stream",
+          "Verify data updates every 5 seconds",
+          "Verify data format is valid JSON"
+        ],
+        "expectedResult": "SSE connection active, data streaming",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-036",
+        "category": "API",
+        "title": "API Error Handling",
+        "objective": "Verify API returns proper error responses",
+        "steps": [
+          "Call GET /api/invalid-endpoint",
+          "Verify 404 response",
+          "Call GET /api/data with invalid org ID",
+          "Verify 400 or 403 response"
+        ],
+        "expectedResult": "Proper error codes and messages",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-037",
+        "category": "Database",
+        "title": "Call Record Creation",
+        "objective": "Verify call records are created correctly",
+        "steps": [
+          "Make a test call",
+          "Query database: SELECT * FROM calls WHERE caller_phone = '+1-555-TEST'",
+          "Verify record exists with all fields populated",
+          "Verify organization_id matches"
+        ],
+        "expectedResult": "Call record created with correct data",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-038",
+        "category": "Database",
+        "title": "Contact Record Creation",
+        "objective": "Verify contact records are created correctly",
+        "steps": [
+          "Make call from new number",
+          "Query database: SELECT * FROM contacts WHERE phone = '+1-555-NEW'",
+          "Verify record exists with name, email",
+          "Verify organization_id matches"
+        ],
+        "expectedResult": "Contact record created with correct data",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-039",
+        "category": "Database",
+        "title": "Appointment Record Creation",
+        "objective": "Verify appointment records are created",
+        "steps": [
+          "Schedule appointment via call",
+          "Query database: SELECT * FROM appointments WHERE contact_id = X",
+          "Verify record exists with date, service type, status",
+          "Verify organization_id matches"
+        ],
+        "expectedResult": "Appointment record created correctly",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-040",
+        "category": "Database",
+        "title": "Data Isolation Verification",
+        "objective": "Verify data is isolated by organization",
+        "steps": [
+          "Query: SELECT COUNT(*) FROM calls WHERE organization_id = 1",
+          "Query: SELECT COUNT(*) FROM calls WHERE organization_id = 2",
+          "Verify counts are different",
+          "Verify no cross-organization data leakage"
+        ],
+        "expectedResult": "Data properly isolated by organization",
+        "priority": "Critical",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-041",
+        "category": "Database",
+        "title": "Usage Metrics Tracking",
+        "objective": "Verify usage is tracked for billing",
+        "steps": [
+          "Make 5 test calls",
+          "Query: SELECT * FROM usage_metrics WHERE organization_id = 1 AND metric_type = 'calls'",
+          "Verify usage incremented by 5",
+          "Verify period dates are correct"
+        ],
+        "expectedResult": "Usage metrics tracked accurately",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-042",
+        "category": "Performance",
+        "title": "Dashboard Load Time",
+        "objective": "Verify dashboard loads within acceptable time",
+        "steps": [
+          "Open Dashboard",
+          "Measure time to full page load",
+          "Verify all components rendered",
+          "Verify no console errors"
+        ],
+        "expectedResult": "Page loads in < 3 seconds",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-043",
+        "category": "Performance",
+        "title": "Real-Time Update Latency",
+        "objective": "Verify real-time updates are fast",
+        "steps": [
+          "Make a test call",
+          "Measure time from call end to KPI update",
+          "Verify update appears within 5 seconds"
+        ],
+        "expectedResult": "Update latency < 5 seconds",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-044",
+        "category": "Performance",
+        "title": "Database Query Performance",
+        "objective": "Verify database queries are fast",
+        "steps": [
+          "Query 1000 calls: SELECT * FROM calls LIMIT 1000",
+          "Measure query time",
+          "Verify response time < 1 second"
+        ],
+        "expectedResult": "Query completes in < 1 second",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-045",
+        "category": "Performance",
+        "title": "Concurrent Users",
+        "objective": "Verify system handles multiple concurrent users",
+        "steps": [
+          "Simulate 10 concurrent dashboard users",
+          "Verify all users can access data",
+          "Verify no timeouts or errors",
+          "Verify response times acceptable"
+        ],
+        "expectedResult": "System handles 10 concurrent users",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-046",
+        "category": "Security",
+        "title": "SQL Injection Prevention",
+        "objective": "Verify SQL injection is prevented",
+        "steps": [
+          "Attempt SQL injection in search: '; DROP TABLE calls; --",
+          "Verify query fails safely",
+          "Verify no data deleted",
+          "Verify error message doesn't expose SQL"
+        ],
+        "expectedResult": "Injection prevented, no data loss",
+        "priority": "Critical",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-047",
+        "category": "Security",
+        "title": "XSS Prevention",
+        "objective": "Verify XSS attacks are prevented",
+        "steps": [
+          "Attempt XSS in contact name: <script>alert('XSS')</script>",
+          "Verify script doesn't execute",
+          "Verify text displayed as plain text",
+          "Verify no console errors"
+        ],
+        "expectedResult": "XSS prevented, script not executed",
+        "priority": "Critical",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-048",
+        "category": "Security",
+        "title": "CSRF Protection",
+        "objective": "Verify CSRF attacks are prevented",
+        "steps": [
+          "Attempt form submission without CSRF token",
+          "Verify request rejected",
+          "Verify error message shown"
+        ],
+        "expectedResult": "CSRF attack prevented",
+        "priority": "Critical",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-049",
+        "category": "Security",
+        "title": "Authentication Required",
+        "objective": "Verify unauthenticated users can't access dashboard",
+        "steps": [
+          "Clear authentication cookies",
+          "Attempt to access /dashboard",
+          "Verify redirect to login page",
+          "Verify no data exposed"
+        ],
+        "expectedResult": "Redirect to login, no data exposed",
+        "priority": "Critical",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      },
+      {
+        "id": "TC-050",
+        "category": "Security",
+        "title": "Rate Limiting",
+        "objective": "Verify API rate limiting works",
+        "steps": [
+          "Make 100 requests to /api/data in 1 second",
+          "Verify requests are rate limited",
+          "Verify 429 (Too Many Requests) response",
+          "Verify can retry after cooldown"
+        ],
+        "expectedResult": "Rate limiting enforced",
+        "priority": "High",
+        "status": "Not Started",
+        "passed": false,
+        "notes": ""
+      }
+    ],
+    "summary": {
+      "totalTests": 50,
+      "criticalTests": 11,
+      "highPriorityTests": 23,
+      "mediumPriorityTests": 16,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0
+    }
+  }
+}

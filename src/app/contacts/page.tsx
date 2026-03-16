@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { User, Phone, Mail, Building, Calendar, TrendingUp } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { useAuth } from '@/hooks/useAuth'
 
 interface Contact {
   id: number
@@ -16,17 +17,25 @@ interface Contact {
 }
 
 export default function ContactsPage() {
+  const { user, loading } = useAuth()
   const [contacts, setContacts] = useState<Contact[]>([])
-  const [loading, setLoading] = useState(true)
+  const [pageLoading, setPageLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
-    fetchContacts()
-  }, [])
+    if (!loading && user) {
+      fetchContacts()
+    }
+  }, [user, loading])
 
   const fetchContacts = async () => {
     try {
-      const response = await fetch('/api/contacts')
+      const token = localStorage.getItem('auth_token')
+      const response = await fetch('/api/contacts', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         setContacts(data.contacts || [])
@@ -34,8 +43,20 @@ export default function ContactsPage() {
     } catch (error) {
       console.error('Error fetching contacts:', error)
     } finally {
-      setLoading(false)
+      setPageLoading(false)
     }
+  }
+
+  if (loading || pageLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
   }
 
   const filteredContacts = contacts.filter(contact =>

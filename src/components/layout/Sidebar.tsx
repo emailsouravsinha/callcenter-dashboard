@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import { 
   Home, 
   MessageSquare, 
@@ -13,7 +14,8 @@ import {
   Shield,
   Phone,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from 'lucide-react'
 
 const navigation = [
@@ -29,6 +31,15 @@ const navigation = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
+  const { user, logout } = useAuth()
+
+  // Hide admin for non-admin users
+  const visibleNav = navigation.filter(item => {
+    if (item.name === 'Admin' && user?.role !== 'owner' && user?.role !== 'admin') {
+      return false
+    }
+    return true
+  })
 
   return (
     <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${
@@ -63,7 +74,7 @@ export function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
-          {navigation.map((item) => {
+          {visibleNav.map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
             
@@ -84,18 +95,27 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* User Info */}
-        {!collapsed && (
-          <div className="p-4 border-t border-gray-200">
+        {/* User Info & Logout */}
+        {!collapsed && user && (
+          <div className="p-4 border-t border-gray-200 space-y-3">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">JD</span>
+                <span className="text-white text-sm font-medium">
+                  {user.email.charAt(0).toUpperCase()}
+                </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">John Doe</p>
-                <p className="text-xs text-gray-500 truncate">Admin</p>
+                <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
+                <p className="text-xs text-gray-500 truncate capitalize">{user.role}</p>
               </div>
             </div>
+            <button
+              onClick={logout}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </button>
           </div>
         )}
       </div>

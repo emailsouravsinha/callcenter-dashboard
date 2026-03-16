@@ -1,0 +1,204 @@
+Test Case ID,Category,Title,Objective,Steps,Expected Result,Priority,Status
+TC-001,System Setup,Database Connection,Verify database connection is established,"1. Start the application
+2. Check database connection logs
+3. Verify MySQL connection pool is active",Connection successful - no errors in logs,Critical,
+TC-002,System Setup,Environment Variables,Verify all required environment variables are set,"1. Check .env.local file exists
+2. Verify DB_HOST - DB_USER - DB_PASSWORD - DB_NAME are set
+3. Verify ORGANIZATION_ID is set
+4. Verify OpenAI API key is configured",All variables present and valid,Critical,
+TC-003,System Setup,API Health Check,Verify API health endpoint responds,"1. Call GET /api/health
+2. Check response status code
+3. Verify response contains system status",Status 200 - response shows OK,High,
+TC-004,Authentication & Multi-Tenancy,Organization Isolation,Verify data isolation between organizations,"1. Set ORGANIZATION_ID=1 (Acme Corporation)
+2. Fetch calls from /api/data
+3. Verify only Acme's calls are returned
+4. Change ORGANIZATION_ID=2 (TechStart Inc)
+5. Fetch calls again
+6. Verify only TechStart's calls are returned",Each org sees only their data,Critical,
+TC-005,Authentication & Multi-Tenancy,Multi-Tenant User Access,Verify users can only access their organization,"1. Login as user from Acme Corporation
+2. Attempt to access TechStart Inc data
+3. Verify access denied",Access denied - 403 error,Critical,
+TC-006,Authentication & Multi-Tenancy,Subscription Plan Limits,Verify subscription limits are enforced,"1. Set organization to Starter plan (1000 calls/month)
+2. Attempt to log 1001st call
+3. Verify rejection or warning",Call rejected or warning shown,High,
+TC-007,Call Handling,Incoming Call Processing,Verify incoming call is processed correctly,"1. Make test call to Twilio number
+2. Verify call is answered by AI
+3. Check call is logged in database
+4. Verify call appears in Activity Feed",Call logged - appears in dashboard,Critical,
+TC-008,Call Handling,First-Time Caller Detection,Verify first-time callers are identified,"1. Call from new phone number
+2. AI should ask for name and email
+3. Verify contact is created in database
+4. Verify contact marked as first-time caller",New contact created with name/email,High,
+TC-009,Call Handling,Returning Caller Recognition,Verify returning callers are recognized,"1. Call from existing contact phone number
+2. AI should greet by name (if available)
+3. Verify call linked to existing contact
+4. Verify call count incremented",Contact recognized - call count updated,High,
+TC-010,Call Handling,Call Transcription,Verify call is transcribed,"1. Make test call with speech
+2. Wait for call to complete
+3. Check Activity Feed for transcript
+4. Verify transcript is accurate",Full transcript captured and displayed,High,
+TC-011,Call Handling,AI Summary Generation,Verify AI generates call summary,"1. Complete a call
+2. Check Activity Feed
+3. Verify AI Summary section populated
+4. Verify summary is relevant to call",Summary generated and displayed,Medium,
+TC-012,Call Handling,Sentiment Analysis,Verify sentiment is analyzed,"1. Make positive call (Great service!)
+2. Check Activity Feed sentiment tag
+3. Make negative call (This is terrible)
+4. Check sentiment tag",Correct sentiment detected (positive/negative),Medium,
+TC-013,Call Handling,Intent Detection,Verify call intent is detected,"1. Call with I want to schedule an appointment
+2. Verify intent shows Schedule Appointment
+3. Call with What are your prices?
+4. Verify intent shows Pricing Inquiry",Correct intents detected,Medium,
+TC-014,Call Handling,Appointment Scheduling,Verify appointments can be scheduled,"1. Call and say I'd like to book an appointment for tomorrow at 2pm
+2. AI should confirm appointment
+3. Check Calendar page
+4. Verify appointment appears with correct date/time",Appointment created and visible in calendar,High,
+TC-015,Call Handling,Callback Request,Verify callback requests are captured,"1. Call and say Can you call me back later?
+2. AI should confirm callback
+3. Check Calendar page
+4. Verify callback appears as appointment",Callback scheduled and visible,High,
+TC-016,Call Handling,Call Hangup on Farewell,Verify call ends after farewell phrase,"1. Make test call
+2. Say Thank you - goodbye
+3. Verify call disconnects
+4. Verify call duration is recorded",Call ends gracefully - duration recorded,Medium,
+TC-017,Call Handling,Knowledge Base Integration,Verify AI answers from knowledge base,"1. Call and ask What are your company policies?
+2. AI should answer from knowledge base
+3. Verify answer is relevant
+4. Check call summary includes knowledge base reference",AI answers from knowledge base,High,
+TC-018,Dashboard,Real-Time KPI Updates,Verify KPIs update in real-time,"1. Open Dashboard
+2. Note current Total Calls value
+3. Make a test call
+4. Wait 5 seconds
+5. Verify Total Calls incremented",KPI updates within 5 seconds,High,
+TC-019,Dashboard,Call Volume Chart,Verify call volume chart displays data,"1. Open Dashboard
+2. Check Call Volume Chart
+3. Verify data points for each hour
+4. Verify chart is interactive",Chart displays with correct data,Medium,
+TC-020,Dashboard,Recent Calls Table,Verify recent calls display correctly,"1. Open Dashboard
+2. Check Recent Calls Table
+3. Verify latest calls appear first
+4. Verify caller name - phone - duration shown",Table shows recent calls in correct order,Medium,
+TC-021,Dashboard,Activity Feed Filtering,Verify activity feed filters work,"1. Open Activity Feed
+2. Click Answered filter
+3. Verify only answered calls shown
+4. Click Missed filter
+5. Verify only missed calls shown",Filters work correctly,Medium,
+TC-022,Dashboard,Contacts Page Display,Verify contacts display correctly,"1. Open Contacts page
+2. Verify contact cards show name - company - phone
+3. Verify total calls count is accurate
+4. Verify last contact date is shown",All contact info displayed correctly,Medium,
+TC-023,Dashboard,Contacts Search,Verify contact search works,"1. Open Contacts page
+2. Search for Sarah
+3. Verify only Sarah's contact shown
+4. Search for +1-555
+5. Verify contacts with that phone prefix shown",Search filters contacts correctly,Medium,
+TC-024,Dashboard,Calendar View,Verify calendar displays appointments,"1. Open Calendar page
+2. Verify appointments listed
+3. Check status badges (scheduled - completed - etc.)
+4. Verify appointment details shown",Calendar shows all appointments with details,Medium,
+TC-025,Dashboard,Analytics Charts,Verify analytics charts display,"1. Open Analytics page
+2. Verify Weekly Call Volume chart
+3. Verify Sentiment Distribution pie chart
+4. Verify Top Call Intents bar chart
+5. Verify Peak Hours line chart",All charts display with data,Medium,
+TC-026,Dashboard,Settings Page,Verify settings can be updated,"1. Open Settings page
+2. Update profile name
+3. Click Save Changes
+4. Verify success message
+5. Refresh page
+6. Verify changes persisted",Settings saved and persisted,Medium,
+TC-027,Dashboard,Admin Panel - Organizations,Verify admin can view organizations,"1. Open Admin Panel
+2. Click Organizations tab
+3. Verify all organizations listed
+4. Verify plan - call count - status shown",Organizations displayed correctly,Medium,
+TC-028,Dashboard,Admin Panel - Users,Verify admin can view users,"1. Open Admin Panel
+2. Click Users tab
+3. Verify all users listed
+4. Verify organization - role shown",Users displayed correctly,Medium,
+TC-029,Dashboard,Admin Panel - Subscriptions,Verify admin can view subscriptions,"1. Open Admin Panel
+2. Click Subscriptions tab
+3. Verify all subscriptions listed
+4. Verify plan - amount - next billing date shown",Subscriptions displayed correctly,Medium,
+TC-030,Dashboard,Admin Panel - System Health,Verify system health status,"1. Open Admin Panel
+2. Click System Health tab
+3. Verify Database status shows Healthy
+4. Verify API Server status shows Healthy
+5. Verify metrics displayed",All systems show healthy status,High,
+TC-031,API,GET /api/data,Verify data endpoint returns calls,"1. Call GET /api/data
+2. Check response status code
+3. Verify response contains calls array
+4. Verify each call has required fields",Status 200 - calls array with valid data,High,
+TC-032,API,GET /api/contacts,Verify contacts endpoint returns contacts,"1. Call GET /api/contacts
+2. Check response status code
+3. Verify response contains contacts array
+4. Verify each contact has required fields",Status 200 - contacts array with valid data,High,
+TC-033,API,GET /api/appointments,Verify appointments endpoint returns appointments,"1. Call GET /api/appointments
+2. Check response status code
+3. Verify response contains appointments array
+4. Verify each appointment has required fields",Status 200 - appointments array with valid data,High,
+TC-034,API,GET /api/dashboard/stats,Verify stats endpoint returns metrics,"1. Call GET /api/dashboard/stats
+2. Check response status code
+3. Verify response contains all KPI metrics
+4. Verify metrics are numeric",Status 200 - all metrics present and numeric,High,
+TC-035,API,GET /api/realtime (SSE),Verify real-time endpoint streams data,"1. Connect to GET /api/realtime
+2. Verify connection established
+3. Wait for data stream
+4. Verify data updates every 5 seconds
+5. Verify data format is valid JSON",SSE connection active - data streaming,High,
+TC-036,API,API Error Handling,Verify API returns proper error responses,"1. Call GET /api/invalid-endpoint
+2. Verify 404 response
+3. Call GET /api/data with invalid org ID
+4. Verify 400 or 403 response",Proper error codes and messages,High,
+TC-037,Database,Call Record Creation,Verify call records are created correctly,"1. Make a test call
+2. Query database: SELECT * FROM calls WHERE caller_phone = '+1-555-TEST'
+3. Verify record exists with all fields populated
+4. Verify organization_id matches",Call record created with correct data,High,
+TC-038,Database,Contact Record Creation,Verify contact records are created correctly,"1. Make call from new number
+2. Query database: SELECT * FROM contacts WHERE phone = '+1-555-NEW'
+3. Verify record exists with name - email
+4. Verify organization_id matches",Contact record created with correct data,High,
+TC-039,Database,Appointment Record Creation,Verify appointment records are created,"1. Schedule appointment via call
+2. Query database: SELECT * FROM appointments WHERE contact_id = X
+3. Verify record exists with date - service type - status
+4. Verify organization_id matches",Appointment record created correctly,High,
+TC-040,Database,Data Isolation Verification,Verify data is isolated by organization,"1. Query: SELECT COUNT(*) FROM calls WHERE organization_id = 1
+2. Query: SELECT COUNT(*) FROM calls WHERE organization_id = 2
+3. Verify counts are different
+4. Verify no cross-organization data leakage",Data properly isolated by organization,Critical,
+TC-041,Database,Usage Metrics Tracking,Verify usage is tracked for billing,"1. Make 5 test calls
+2. Query: SELECT * FROM usage_metrics WHERE organization_id = 1 AND metric_type = 'calls'
+3. Verify usage incremented by 5
+4. Verify period dates are correct",Usage metrics tracked accurately,High,
+TC-042,Performance,Dashboard Load Time,Verify dashboard loads within acceptable time,"1. Open Dashboard
+2. Measure time to full page load
+3. Verify all components rendered
+4. Verify no console errors",Page loads in < 3 seconds,High,
+TC-043,Performance,Real-Time Update Latency,Verify real-time updates are fast,"1. Make a test call
+2. Measure time from call end to KPI update
+3. Verify update appears within 5 seconds",Update latency < 5 seconds,High,
+TC-044,Performance,Database Query Performance,Verify database queries are fast,"1. Query 1000 calls: SELECT * FROM calls LIMIT 1000
+2. Measure query time
+3. Verify response time < 1 second",Query completes in < 1 second,High,
+TC-045,Performance,Concurrent Users,Verify system handles multiple concurrent users,"1. Simulate 10 concurrent dashboard users
+2. Verify all users can access data
+3. Verify no timeouts or errors
+4. Verify response times acceptable",System handles 10 concurrent users,High,
+TC-046,Security,SQL Injection Prevention,Verify SQL injection is prevented,"1. Attempt SQL injection in search: '; DROP TABLE calls; --
+2. Verify query fails safely
+3. Verify no data deleted
+4. Verify error message doesn't expose SQL",Injection prevented - no data loss,Critical,
+TC-047,Security,XSS Prevention,Verify XSS attacks are prevented,"1. Attempt XSS in contact name: <script>alert('XSS')</script>
+2. Verify script doesn't execute
+3. Verify text displayed as plain text
+4. Verify no console errors",XSS prevented - script not executed,Critical,
+TC-048,Security,CSRF Protection,Verify CSRF attacks are prevented,"1. Attempt form submission without CSRF token
+2. Verify request rejected
+3. Verify error message shown",CSRF attack prevented,Critical,
+TC-049,Security,Authentication Required,Verify unauthenticated users can't access dashboard,"1. Clear authentication cookies
+2. Attempt to access /dashboard
+3. Verify redirect to login page
+4. Verify no data exposed",Redirect to login - no data exposed,Critical,
+TC-050,Security,Rate Limiting,Verify API rate limiting works,"1. Make 100 requests to /api/data in 1 second
+2. Verify requests are rate limited
+3. Verify 429 (Too Many Requests) response
+4. Verify can retry after cooldown",Rate limiting enforced,High,

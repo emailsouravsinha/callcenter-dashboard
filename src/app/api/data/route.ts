@@ -1,35 +1,67 @@
-import { NextResponse } from 'next/server'
-import { executeQuery } from '@/lib/database'
+import { NextRequest, NextResponse } from 'next/server'
+import mysql from 'mysql2/promise'
+import { verifyToken } from '@/lib/auth'
 
-export async function GET() {
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '3306'),
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'callcenter_saas',
+}
+
+export async function GET(request: NextRequest) {
   try {
-    // Example queries - replace with your actual table names and structure
-    const [users, projects, revenue] = await Promise.all([
-      executeQuery('SELECT COUNT(*) as count FROM users'),
-      executeQuery('SELECT COUNT(*) as count FROM projects WHERE status = "active"'),
-      executeQuery('SELECT SUM(amount) as total FROM revenue WHERE MONTH(created_at) = MONTH(CURRENT_DATE())')
-    ])
+    // Get token from Authorization header
+    const authHeader = request.headers.get('Authorization')
+    const token = authHeader?.replace('Bearer ', '')
 
-    // Sample data structure - adjust based on your actual database schema
-    const stats = {
-      totalUsers: Array.isArray(users) && users.length > 0 ? (users[0] as any).count : 0,
-      activeProjects: Array.isArray(projects) && projects.length > 0 ? (projects[0] as any).count : 0,
-      monthlyRevenue: Array.isArray(revenue) && revenue.length > 0 ? (revenue[0] as any).total || 0 : 0
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
+
+    // Verify token
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return NextResponse.json(
+        { error: 'Invalid token' },
+        { status: 401 }
+      )
+    }
+
+    const connection = await mysql.createConnection(dbConfig)
+
+    // Get recent calls for this organization
+    const [calls] = await connection.execute(
+      `SELECT 
+        id, caller_name, caller_phone, caller_email, start_time, duration,
+        status, outcome, sentiment, intent, transcript, ai_summary,
+        CASE 
+          WHEN start_time >= NOW() - INTERVAL 1 MINUTE THEN 'Just now'
+          WHEN start_time >= NOW() - INTERVAL 1 HOUR THEN CONCAT(TIMESTAMPDIFF(MINUTE, start_time, NOW()), ' minutes ago')
+          WHEN start_time >= NOW() - INTERVAL 1 DAY THEN CONCAT(TIMESTAMPDIFF(HOUR, start_time, NOW()), ' hours ago')
+          ELSE DATE_FORMAT(start_time, '%M %d, %Y')
+        END as time_ago
+      FROM calls 
+      WHERE organization_id = ?
+      ORDER BY created_at DESC
+      LIMIT 50`,
+      [decoded.organizationId]
+    )
+
+    connection.end()
 
     return NextResponse.json({
       success: true,
-      data: stats,
-      timestamp: new Date().toISOString()
+      recentCalls: calls,
     })
   } catch (error) {
-    console.error('API Error:', error)
+    console.error('Error fetching data:', error)
     return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch data',
-        timestamp: new Date().toISOString()
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

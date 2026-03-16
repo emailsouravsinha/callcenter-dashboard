@@ -1,11 +1,28 @@
+'use client'
+
 import { Suspense } from 'react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { CallCenterKPIs } from '@/components/dashboard/CallCenterKPIs'
 import { CallVolumeChart } from '@/components/dashboard/CallVolumeChart'
 import { RecentCallsTable } from '@/components/dashboard/RecentCallsTable'
 import { QuickActions } from '@/components/dashboard/QuickActions'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function DashboardPage() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">

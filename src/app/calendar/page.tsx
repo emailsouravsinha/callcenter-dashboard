@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Calendar as CalendarIcon, Clock, User, Phone, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { useAuth } from '@/hooks/useAuth'
 
 interface Appointment {
   id: number
@@ -16,17 +17,25 @@ interface Appointment {
 }
 
 export default function CalendarPage() {
+  const { user, loading } = useAuth()
   const [appointments, setAppointments] = useState<Appointment[]>([])
-  const [loading, setLoading] = useState(true)
+  const [pageLoading, setPageLoading] = useState(true)
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
-    fetchAppointments()
-  }, [])
+    if (!loading && user) {
+      fetchAppointments()
+    }
+  }, [user, loading])
 
   const fetchAppointments = async () => {
     try {
-      const response = await fetch('/api/appointments')
+      const token = localStorage.getItem('auth_token')
+      const response = await fetch('/api/appointments', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         setAppointments(data.appointments || [])
@@ -34,8 +43,20 @@ export default function CalendarPage() {
     } catch (error) {
       console.error('Error fetching appointments:', error)
     } finally {
-      setLoading(false)
+      setPageLoading(false)
     }
+  }
+
+  if (loading || pageLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
   }
 
   const filteredAppointments = appointments.filter(apt => {

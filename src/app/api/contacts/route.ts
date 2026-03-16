@@ -1,23 +1,60 @@
-import { NextResponse } from 'next/server'
-import { getContacts } from '@/lib/database'
+import { NextRequest, NextResponse } from 'next/server'
+import mysql from 'mysql2/promise'
+import { verifyToken } from '@/lib/auth'
 
-export async function GET() {
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '3306'),
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'callcenter_saas',
+}
+
+export async function GET(request: NextRequest) {
   try {
-    const contacts = await getContacts(100)
-    
+    // Get token from Authorization header
+    const authHeader = request.headers.get('Authorization')
+    const token = authHeader?.replace('Bearer ', '')
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Verify token
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return NextResponse.json(
+        { error: 'Invalid token' },
+        { status: 401 }
+      )
+    }
+
+    const connection = await mysql.createConnection(dbConfig)
+
+    // Get contacts for this organization
+    const [contacts] = await connection.execute(
+      `SELECT 
+        id, name, company, phone, email, total_calls, status, last_contact_date
+      FROM contacts 
+      WHERE organization_id = ? AND status = 'active'
+      ORDER BY last_contact_date DESC
+      LIMIT 50`,
+      [decoded.organizationId]
+    )
+
+    connection.end()
+
     return NextResponse.json({
       success: true,
-      contacts,
-      timestamp: new Date().toISOString()
+      contacts: contacts,
     })
   } catch (error) {
     console.error('Error fetching contacts:', error)
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch contacts',
-        contacts: []
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
