@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken'
+import jwt, { SignOptions, VerifyOptions } from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 
@@ -7,17 +7,18 @@ export interface AuthToken {
   organizationId: number
   email: string
   role: 'owner' | 'admin' | 'manager' | 'agent' | 'read_only'
-  iat: number
-  exp: number
+  iat?: number
+  exp?: number
 }
 
-export function generateToken(payload: Omit<AuthToken, 'iat' | 'exp'>, expiresIn = '7d'): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn })
+export function generateToken(payload: Omit<AuthToken, 'iat' | 'exp'>, expiresIn: string | number = '7d'): string {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn } as SignOptions)
 }
 
 export function verifyToken(token: string): AuthToken | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as AuthToken
+    const options: VerifyOptions = {}
+    return jwt.verify(token, JWT_SECRET, options) as AuthToken
   } catch (error) {
     return null
   }

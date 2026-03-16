@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
+    "@types/jsonwebtoken": "^9.0.10",
     "autoprefixer": "^10.4.24",
+    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.555.0",
     "mysql2": "^3.6.5",
     "next": "16.1.1",
