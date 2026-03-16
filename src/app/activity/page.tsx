@@ -19,6 +19,7 @@ interface Call {
   transcript: string
   ai_summary: string
   time_ago: string
+  turn_count?: number
 }
 
 export default function ActivityPage() {
@@ -177,14 +178,42 @@ export default function ActivityPage() {
                 </div>
               )}
 
-              {/* Transcript */}
+              {/* Conversation Transcript */}
               {call.transcript && (
                 <details className="cursor-pointer">
-                  <summary className="text-sm font-medium text-blue-600 hover:text-blue-700">
-                    View Full Transcript
+                  <summary className="text-sm font-medium text-purple-600 hover:text-purple-700">
+                    View Conversation {call.turn_count ? `(${call.turn_count} turns)` : ''}
                   </summary>
-                  <div className="mt-2 p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{call.transcript}</p>
+                  <div className="mt-3 space-y-3 p-4 bg-gray-50 rounded-lg max-h-96 overflow-y-auto">
+                    {call.transcript.split('\n\n').map((turn, i) => {
+                      const lines = turn.split('\n')
+                      return (
+                        <div key={i} className="space-y-2">
+                          {lines.map((line, j) => {
+                            const isCaller = line.startsWith('Caller:')
+                            const isSophie = line.startsWith('Sophie:')
+                            const content = line.replace(/^(Caller:|Sophie:)\s*/, '')
+                            if (!content.trim()) return null
+                            return (
+                              <div key={j} className={`flex ${isSophie ? 'justify-start' : 'justify-end'}`}>
+                                <div className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${
+                                  isSophie
+                                    ? 'bg-purple-100 text-purple-900'
+                                    : isCaller
+                                    ? 'bg-blue-100 text-blue-900'
+                                    : 'bg-white text-gray-700'
+                                }`}>
+                                  <p className="text-xs font-medium mb-0.5 opacity-70">
+                                    {isSophie ? '🤖 Sophie' : isCaller ? '📞 Caller' : ''}
+                                  </p>
+                                  <p>{content}</p>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })}
                   </div>
                 </details>
               )}
