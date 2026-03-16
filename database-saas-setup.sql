@@ -99,6 +99,8 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url VARCHAR(500),
     email_verified BOOLEAN DEFAULT FALSE,
     email_verified_at TIMESTAMP NULL,
+    reset_token VARCHAR(255) NULL,
+    reset_token_expires TIMESTAMP NULL,
     last_login TIMESTAMP NULL,
     is_super_admin BOOLEAN DEFAULT FALSE, -- Platform admin
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -360,3 +362,11 @@ INSERT INTO surveys (organization_id, call_id, contact_id, survey_type, rating, 
 SHOW TABLES;
 
 SELECT 'Database setup complete! Multi-tenant SaaS architecture ready.' as Status;
+
+-- ============================================================================
+-- MIGRATION: Add reset_token columns (for existing databases)
+-- ============================================================================
+
+-- Run these if upgrading an existing database:
+-- ALTER TABLE users ADD COLUMN reset_token VARCHAR(255) NULL AFTER email_verified_at;
+-- ALTER TABLE users ADD COLUMN reset_token_expires TIMESTAMP NULL AFTER reset_token;

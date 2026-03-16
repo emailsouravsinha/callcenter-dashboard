@@ -50,12 +50,12 @@ export function Sidebar() {
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           {!collapsed && (
             <div className="flex items-center space-x-2">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Phone className="h-6 w-6 text-blue-600" />
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <span className="text-xl">🤖</span>
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">CallCenter AI</h2>
-                <p className="text-xs text-gray-500">Analytics Dashboard</p>
+                <h2 className="text-lg font-semibold text-gray-900">Sophie</h2>
+                <p className="text-xs text-gray-500">AI Receptionist</p>
               </div>
             </div>
           )}
@@ -84,7 +84,7 @@ export function Sidebar() {
                 href={item.href}
                 className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-blue-100 text-blue-700'
+                    ? 'bg-purple-100 text-purple-700'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
@@ -99,7 +99,7 @@ export function Sidebar() {
         {!collapsed && user && (
           <div className="p-4 border-t border-gray-200 space-y-3">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">
                   {user.email.charAt(0).toUpperCase()}
                 </span>

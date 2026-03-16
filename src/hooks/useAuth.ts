@@ -6,7 +6,10 @@ import { useRouter } from 'next/navigation'
 export interface User {
   id: number
   email: string
+  firstName?: string
+  lastName?: string
   organizationId: number
+  orgName?: string
   role: 'owner' | 'admin' | 'manager' | 'agent' | 'read_only'
 }
 
@@ -17,7 +20,6 @@ export function useAuth() {
   const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
-    // Check if user is logged in
     const storedToken = localStorage.getItem('auth_token')
     const storedUser = localStorage.getItem('user')
 

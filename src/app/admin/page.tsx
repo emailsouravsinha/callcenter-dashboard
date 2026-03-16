@@ -1,269 +1,403 @@
 'use client'
 
-import { useState } from 'react'
-import { Building, Users, CreditCard, Activity, Shield, Database } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Building, Users, Plus, Trash2, AlertCircle, CheckCircle, Copy, X } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { useAuth } from '@/hooks/useAuth'
+
+interface Organization {
+  id: number
+  name: string
+  slug: string
+  status: string
+  user_count: number
+  created_at: string
+}
+
+interface UserRecord {
+  id: number
+  email: string
+  first_name: string
+  last_name: string
+  role: string
+  is_active: boolean
+  organization_id: number
+  org_name: string
+  created_at: string
+}
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState('organizations')
+  const { token, loading: authLoading } = useAuth()
+  const [activeTab, setActiveTab] = useState<'organizations' | 'users'>('organizations')
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [users, setUsers] = useState<UserRecord[]>([])
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  const tabs = [
-    { id: 'organizations', name: 'Organizations', icon: Building },
-    { id: 'users', name: 'Users', icon: Users },
-    { id: 'subscriptions', name: 'Subscriptions', icon: CreditCard },
-    { id: 'system', name: 'System Health', icon: Activity },
-  ]
+  // Organization form
+  const [showOrgForm, setShowOrgForm] = useState(false)
+  const [orgForm, setOrgForm] = useState({ name: '', slug: '' })
 
-  const organizations = [
-    { id: 1, name: 'Acme Corporation', plan: 'Professional', calls: 1282, status: 'active' },
-    { id: 2, name: 'TechStart Inc', plan: 'Starter', calls: 456, status: 'active' },
-    { id: 3, name: 'Global Services', plan: 'Enterprise', calls: 3421, status: 'active' },
-  ]
+  // User form
+  const [showUserForm, setShowUserForm] = useState(false)
+  const [userForm, setUserForm] = useState({
+    email: '', firstName: '', lastName: '', role: 'agent', organizationId: '',
+  })
+  const [tempPassword, setTempPassword] = useState('')
 
-  const users = [
-    { id: 1, name: 'John Doe', email: 'john@acme.com', role: 'admin', org: 'Acme Corporation' },
-    { id: 2, name: 'Jane Smith', email: 'jane@acme.com', role: 'agent', org: 'Acme Corporation' },
-    { id: 3, name: 'Bob Wilson', email: 'bob@techstart.com', role: 'owner', org: 'TechStart Inc' },
-  ]
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
 
-  const subscriptions = [
-    { org: 'Acme Corporation', plan: 'Professional', amount: '$99/mo', status: 'active', nextBilling: '2026-04-12' },
-    { org: 'TechStart Inc', plan: 'Starter', amount: '$29/mo', status: 'active', nextBilling: '2026-04-15' },
-    { org: 'Global Services', plan: 'Enterprise', amount: '$299/mo', status: 'active', nextBilling: '2026-04-10' },
-  ]
+  useEffect(() => {
+    if (token) {
+      fetchOrganizations()
+      fetchUsers()
+    }
+  }, [token])
+
+  const fetchOrganizations = async () => {
+    try {
+      const res = await fetch('/api/admin/organizations', { headers })
+      const data = await res.json()
+      if (data.organizations) setOrganizations(data.organizations)
+    } catch { /* ignore */ }
+  }
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('/api/admin/users', { headers })
+      const data = await res.json()
+      if (data.users) setUsers(data.users)
+    } catch { /* ignore */ }
+  }
+
+  const handleCreateOrg = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/organizations', {
+        method: 'POST', headers,
+        body: JSON.stringify(orgForm),
+      })
+      const data = await res.json()
+      if (!res.ok) { setMessage({ type: 'error', text: data.error }); return }
+      setMessage({ type: 'success', text: `Organization "${orgForm.name}" created` })
+      setOrgForm({ name: '', slug: '' })
+      setShowOrgForm(false)
+      fetchOrganizations()
+    } catch { setMessage({ type: 'error', text: 'Failed to create organization' }) }
+    finally { setLoading(false) }
+  }
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setMessage(null)
+    setTempPassword('')
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST', headers,
+        body: JSON.stringify(userForm),
+      })
+      const data = await res.json()
+      if (!res.ok) { setMessage({ type: 'error', text: data.error }); return }
+      setMessage({ type: 'success', text: `User ${userForm.email} created. Welcome email sent.` })
+      setTempPassword(data.tempPassword)
+      setUserForm({ email: '', firstName: '', lastName: '', role: 'agent', organizationId: '' })
+      fetchUsers()
+    } catch { setMessage({ type: 'error', text: 'Failed to create user' }) }
+    finally { setLoading(false) }
+  }
+
+  const handleDeleteUser = async (userId: number) => {
+    if (!confirm('Are you sure you want to deactivate this user?')) return
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'DELETE', headers,
+        body: JSON.stringify({ userId }),
+      })
+      if (res.ok) {
+        setMessage({ type: 'success', text: 'User deactivated' })
+        fetchUsers()
+      }
+    } catch { setMessage({ type: 'error', text: 'Failed to deactivate user' }) }
+  }
+
+  const autoSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+
+  if (authLoading) {
+    return <DashboardLayout><div className="p-6"><div className="animate-pulse h-8 bg-gray-200 rounded w-1/4" /></div></DashboardLayout>
+  }
+
+  const roleColors: Record<string, string> = {
+    owner: 'bg-purple-100 text-purple-700',
+    admin: 'bg-blue-100 text-blue-700',
+    manager: 'bg-indigo-100 text-indigo-700',
+    agent: 'bg-gray-100 text-gray-700',
+    read_only: 'bg-yellow-100 text-yellow-700',
+  }
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">Admin Panel</h1>
-          <p className="text-gray-600">Multi-tenant system administration</p>
+        <div>
+          <h1 className="text-2xl font-bold mb-1">Admin Panel</h1>
+          <p className="text-gray-600">Manage customer organizations and users</p>
         </div>
 
+        {/* Message */}
+        {message && (
+          <div className={`p-4 rounded-xl flex items-start gap-3 ${message.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+            {message.type === 'success' ? <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" /> : <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />}
+            <p className={`text-sm ${message.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>{message.text}</p>
+          </div>
+        )}
+
+        {/* Temp password display */}
+        {tempPassword && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <p className="text-sm text-amber-800 font-medium mb-2">Temporary password (share if email delivery fails):</p>
+            <div className="flex items-center gap-2">
+              <code className="bg-white px-3 py-1.5 rounded-lg border text-sm font-mono">{tempPassword}</code>
+              <button onClick={() => { navigator.clipboard.writeText(tempPassword); }} className="p-1.5 hover:bg-amber-100 rounded-lg" title="Copy">
+                <Copy className="w-4 h-4 text-amber-700" />
+              </button>
+              <button onClick={() => setTempPassword('')} className="p-1.5 hover:bg-amber-100 rounded-lg ml-auto" title="Dismiss">
+                <X className="w-4 h-4 text-amber-700" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
-        <div className="mb-6 border-b border-gray-200">
+        <div className="border-b border-gray-200">
           <nav className="flex gap-8">
-            {tabs.map((tab) => {
+            {[
+              { id: 'organizations' as const, label: 'Organizations', icon: Building },
+              { id: 'users' as const, label: 'Users', icon: Users },
+            ].map((tab) => {
               const Icon = tab.icon
               return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 pb-4 border-b-2 transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 pb-4 border-b-2 transition-colors ${activeTab === tab.id ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
                   <Icon className="w-5 h-5" />
-                  <span className="font-medium">{tab.name}</span>
+                  <span className="font-medium">{tab.label}</span>
                 </button>
               )
             })}
           </nav>
         </div>
 
-        {/* Content */}
+        {/* Organizations Tab */}
         {activeTab === 'organizations' && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">Organizations</h2>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Add Organization
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Customer Organizations ({organizations.length})</h2>
+              <button onClick={() => setShowOrgForm(!showOrgForm)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium text-sm">
+                <Plus className="w-4 h-4" /> Add Organization
               </button>
             </div>
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Organization</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Calls</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {organizations.map((org) => (
-                    <tr key={org.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                            <Building className="w-5 h-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{org.name}</p>
-                            <p className="text-sm text-gray-500">ID: {org.id}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
-                          {org.plan}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-900">{org.calls.toLocaleString()}</td>
-                      <td className="px-6 py-4">
-                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                          {org.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                          Manage
-                        </button>
-                      </td>
+
+            {showOrgForm && (
+              <form onSubmit={handleCreateOrg} className="bg-white rounded-xl shadow p-6 space-y-4 border border-purple-100">
+                <h3 className="font-semibold text-gray-900">New Organization</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Organization Name</label>
+                    <input type="text" value={orgForm.name}
+                      onChange={(e) => setOrgForm({ name: e.target.value, slug: autoSlug(e.target.value) })}
+                      placeholder="Acme Corporation" required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Slug (URL-friendly)</label>
+                    <input type="text" value={orgForm.slug}
+                      onChange={(e) => setOrgForm({ ...orgForm, slug: e.target.value })}
+                      placeholder="acme-corporation" required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button type="button" onClick={() => setShowOrgForm(false)} className="px-4 py-2 text-gray-600 hover:text-gray-900">Cancel</button>
+                  <button type="submit" disabled={loading}
+                    className="px-6 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 font-medium">
+                    {loading ? 'Creating...' : 'Create Organization'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            <div className="bg-white rounded-xl shadow overflow-hidden">
+              {organizations.length === 0 ? (
+                <div className="px-6 py-12 text-center">
+                  <Building className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No organizations yet. Add your first customer.</p>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Organization</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Slug</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Users</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {organizations.map((org) => (
+                      <tr key={org.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                              <Building className="w-5 h-5 text-purple-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{org.name}</p>
+                              <p className="text-xs text-gray-500">ID: {org.id}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 font-mono">{org.slug}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900">{org.user_count}</td>
+                        <td className="px-6 py-4">
+                          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">{org.status}</span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{new Date(org.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         )}
 
+        {/* Users Tab */}
         {activeTab === 'users' && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">Users</h2>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Add User
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Users ({users.length})</h2>
+              <button onClick={() => setShowUserForm(!showUserForm)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium text-sm">
+                <Plus className="w-4 h-4" /> Add User
               </button>
             </div>
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Organization</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="font-medium">{user.name}</p>
-                          <p className="text-sm text-gray-500">{user.email}</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-gray-900">{user.org}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-sm ${
-                          user.role === 'owner' ? 'bg-purple-100 text-purple-700' :
-                          user.role === 'admin' ? 'bg-blue-100 text-blue-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
-        {activeTab === 'subscriptions' && (
-          <div>
-            <h2 className="text-xl font-semibold mb-6">Subscriptions & Billing</h2>
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Organization</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Next Billing</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {subscriptions.map((sub, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium">{sub.org}</td>
-                      <td className="px-6 py-4">{sub.plan}</td>
-                      <td className="px-6 py-4 font-semibold text-green-600">{sub.amount}</td>
-                      <td className="px-6 py-4">
-                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                          {sub.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">{sub.nextBilling}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+            {showUserForm && (
+              <form onSubmit={handleCreateUser} className="bg-white rounded-xl shadow p-6 space-y-4 border border-purple-100">
+                <h3 className="font-semibold text-gray-900">New User</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">First Name</label>
+                    <input type="text" value={userForm.firstName}
+                      onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })}
+                      placeholder="John" required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Last Name</label>
+                    <input type="text" value={userForm.lastName}
+                      onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })}
+                      placeholder="Doe" required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+                    <input type="email" value={userForm.email}
+                      onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                      placeholder="john@company.com" required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Organization</label>
+                    <select value={userForm.organizationId}
+                      onChange={(e) => setUserForm({ ...userForm, organizationId: e.target.value })}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                      <option value="">Select organization</option>
+                      {organizations.map((org) => (
+                        <option key={org.id} value={org.id}>{org.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+                    <select value={userForm.role}
+                      onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                      <option value="agent">Agent</option>
+                      <option value="manager">Manager</option>
+                      <option value="admin">Admin</option>
+                      <option value="owner">Owner</option>
+                      <option value="read_only">Read Only</option>
+                    </select>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">A temporary password will be generated and emailed to the user.</p>
+                <div className="flex justify-end gap-3">
+                  <button type="button" onClick={() => setShowUserForm(false)} className="px-4 py-2 text-gray-600 hover:text-gray-900">Cancel</button>
+                  <button type="submit" disabled={loading}
+                    className="px-6 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 font-medium">
+                    {loading ? 'Creating...' : 'Create User'}
+                  </button>
+                </div>
+              </form>
+            )}
 
-        {activeTab === 'system' && (
-          <div>
-            <h2 className="text-xl font-semibold mb-6">System Health</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <Database className="w-8 h-8 text-blue-600" />
-                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">Healthy</span>
+            <div className="bg-white rounded-xl shadow overflow-hidden">
+              {users.length === 0 ? (
+                <div className="px-6 py-12 text-center">
+                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No users yet. Add your first user above.</p>
                 </div>
-                <h3 className="font-semibold mb-1">Database</h3>
-                <p className="text-sm text-gray-600">MySQL connection active</p>
-                <p className="text-xs text-gray-500 mt-2">Last checked: 2 minutes ago</p>
-              </div>
-
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <Activity className="w-8 h-8 text-green-600" />
-                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">Healthy</span>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Organization</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {users.map((u) => (
+                        <tr key={u.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4">
+                            <p className="font-medium text-gray-900">{u.first_name} {u.last_name}</p>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{u.email}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{u.org_name}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${roleColors[u.role] || 'bg-gray-100 text-gray-700'}`}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              {u.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {u.is_active && (
+                              <button onClick={() => handleDeleteUser(u.id)} className="text-red-600 hover:text-red-700" title="Deactivate user">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <h3 className="font-semibold mb-1">API Server</h3>
-                <p className="text-sm text-gray-600">All endpoints responding</p>
-                <p className="text-xs text-gray-500 mt-2">Uptime: 99.9%</p>
-              </div>
-
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <Shield className="w-8 h-8 text-purple-600" />
-                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">Secure</span>
-                </div>
-                <h3 className="font-semibold mb-1">Security</h3>
-                <p className="text-sm text-gray-600">No threats detected</p>
-                <p className="text-xs text-gray-500 mt-2">Last scan: 1 hour ago</p>
-              </div>
-            </div>
-
-            <div className="mt-6 bg-white rounded-lg shadow p-6">
-              <h3 className="font-semibold mb-4">System Metrics</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total API Requests</p>
-                  <p className="text-2xl font-bold">1.2M</p>
-                  <p className="text-xs text-green-600 mt-1">+12% from last month</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Average Response Time</p>
-                  <p className="text-2xl font-bold">145ms</p>
-                  <p className="text-xs text-green-600 mt-1">-8% from last month</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Error Rate</p>
-                  <p className="text-2xl font-bold">0.02%</p>
-                  <p className="text-xs text-green-600 mt-1">Within target</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Active Users</p>
-                  <p className="text-2xl font-bold">247</p>
-                  <p className="text-xs text-blue-600 mt-1">Currently online</p>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
