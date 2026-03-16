@@ -1,29 +1,37 @@
 import { NextRequest } from 'next/server'
+import { verifyToken, getTokenFromCookie } from '@/lib/auth'
 import { getDashboardStats, getRecentCalls } from '@/lib/database'
 
 // Server-Sent Events endpoint for real-time updates
 export async function GET(request: NextRequest) {
   const encoder = new TextEncoder()
 
+  // Extract orgId from auth token
+  const cookieHeader = request.headers.get('cookie') || ''
+  const authHeader = request.headers.get('authorization')
+  const token = authHeader?.replace('Bearer ', '') || getTokenFromCookie(cookieHeader)
+
+  let orgId: number | undefined
+  if (token) {
+    const decoded = verifyToken(token)
+    if (decoded && decoded.organizationId > 0) {
+      orgId = decoded.organizationId
+    }
+  }
+
   const customReadable = new ReadableStream({
     start(controller) {
-      // Send initial connection message
       const data = `data: ${JSON.stringify({
         type: 'connected',
         timestamp: new Date().toISOString(),
         message: 'Real-time connection established'
       })}\n\n`
-      
       controller.enqueue(encoder.encode(data))
 
-      // Function to send real-time updates
       const sendUpdate = async () => {
         try {
-          // Get real dashboard stats from database
-          const stats = await getDashboardStats()
-          
-          // Get latest call (if any new ones)
-          const recentCalls = await getRecentCalls(1)
+          const stats = await getDashboardStats(orgId)
+          const recentCalls = await getRecentCalls(1, orgId)
           const latestCall = recentCalls[0]
 
           const updateData = {
@@ -38,7 +46,6 @@ export async function GET(request: NextRequest) {
               leadsQualified: stats.leadsQualified,
               avgSatisfaction: stats.avgSatisfaction,
               resolutionRate: stats.resolutionRate,
-              // Include new call if it's very recent (within last 30 seconds)
               newCall: latestCall && latestCall.time_ago === 'Just now' ? {
                 id: latestCall.id,
                 caller: latestCall.caller_name || 'Unknown Caller',
@@ -50,43 +57,22 @@ export async function GET(request: NextRequest) {
             }
           }
 
-          const eventData = `data: ${JSON.stringify(updateData)}\n\n`
-          controller.enqueue(encoder.encode(eventData))
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(updateData)}\n\n`))
         } catch (error) {
           console.error('Error fetching real-time data:', error)
-          
-          // Send mock data if database fails
-          const mockUpdate = {
-            type: 'call_update',
+          // Send error status instead of fake data
+          const errorData = {
+            type: 'error',
             timestamp: new Date().toISOString(),
-            data: {
-              totalCalls: Math.floor(Math.random() * 50) + 1200,
-              answerRate: (Math.random() * 10 + 90).toFixed(1),
-              avgDuration: `${Math.floor(Math.random() * 3) + 3}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
-              unresolvedCalls: Math.floor(Math.random() * 10) + 15,
-              newCall: Math.random() > 0.8 ? {
-                id: Date.now(),
-                caller: ['Sarah Johnson', 'Mike Chen', 'Jennifer Davis', 'Robert Wilson'][Math.floor(Math.random() * 4)],
-                phone: `+1-555-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`,
-                time: 'Just now',
-                outcome: ['appointment_booked', 'lead_qualified', 'info_only'][Math.floor(Math.random() * 3)],
-                sentiment: ['positive', 'neutral', 'negative'][Math.floor(Math.random() * 3)]
-              } : null
-            }
+            message: 'Database temporarily unavailable'
           }
-
-          const eventData = `data: ${JSON.stringify(mockUpdate)}\n\n`
-          controller.enqueue(encoder.encode(eventData))
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorData)}\n\n`))
         }
       }
 
-      // Send updates every 5 seconds
       const interval = setInterval(sendUpdate, 5000)
-
-      // Send initial update immediately
       sendUpdate()
 
-      // Cleanup on connection close
       request.signal.addEventListener('abort', () => {
         clearInterval(interval)
         controller.close()

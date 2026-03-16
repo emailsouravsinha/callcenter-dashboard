@@ -1,18 +1,16 @@
 import mysql from 'mysql2/promise'
 
-// Database connection configuration
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '3306'),
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'callcenter_ai',
+  database: process.env.DB_NAME || 'callcenter_saas',
   ...(process.env.DB_SSL === 'true' && {
     ssl: { rejectUnauthorized: false }
   }),
 }
 
-// Create connection pool for better performance
 const pool = mysql.createPool({
   ...dbConfig,
   waitForConnections: true,
@@ -20,21 +18,18 @@ const pool = mysql.createPool({
   queueLimit: 0,
 })
 
-// Test database connection
 export async function testConnection() {
   try {
     const connection = await pool.getConnection()
     await connection.ping()
     connection.release()
-    console.log('✅ Database connection successful')
     return true
   } catch (error) {
-    console.error('❌ Database connection failed:', error)
+    console.error('Database connection failed:', error)
     return false
   }
 }
 
-// Generic query function
 export async function executeQuery<T = any>(query: string, params: any[] = []): Promise<T[]> {
   try {
     const [rows] = await pool.execute(query, params)
@@ -45,65 +40,36 @@ export async function executeQuery<T = any>(query: string, params: any[] = []): 
   }
 }
 
-// CALL CENTER SPECIFIC QUERIES
-
-// Get real-time dashboard statistics
-export async function getDashboardStats() {
-  const queries = {
-    totalCalls: `
-      SELECT COUNT(*) as total 
-      FROM calls 
-      WHERE DATE(created_at) = CURDATE()
-    `,
-    answerRate: `
-      SELECT 
-        ROUND((COUNT(CASE WHEN status = 'answered' THEN 1 END) * 100.0 / COUNT(*)), 1) as rate
-      FROM calls 
-      WHERE DATE(created_at) = CURDATE()
-    `,
-    avgDuration: `
-      SELECT 
-        SEC_TO_TIME(AVG(TIME_TO_SEC(duration))) as avg_duration
-      FROM calls 
-      WHERE status = 'answered' AND DATE(created_at) = CURDATE()
-    `,
-    unresolvedCalls: `
-      SELECT COUNT(*) as count 
-      FROM calls 
-      WHERE first_contact_resolution = FALSE AND DATE(created_at) = CURDATE()
-    `,
-    appointmentsBooked: `
-      SELECT COUNT(*) as count 
-      FROM appointments 
-      WHERE DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-    `,
-    leadsQualified: `
-      SELECT COUNT(*) as count 
-      FROM leads 
-      WHERE status IN ('qualified', 'converted') AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-    `,
-    avgSatisfaction: `
-      SELECT ROUND(AVG(rating), 1) as avg_rating 
-      FROM surveys 
-      WHERE survey_type = 'csat' AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-    `,
-    resolutionRate: `
-      SELECT 
-        ROUND((COUNT(CASE WHEN first_contact_resolution = TRUE THEN 1 END) * 100.0 / COUNT(*)), 1) as rate
-      FROM calls 
-      WHERE status = 'answered' AND DATE(created_at) = CURDATE()
-    `
-  }
+// Dashboard KPIs - all filtered by organization_id
+export async function getDashboardStats(orgId?: number) {
+  const orgFilter = orgId ? 'AND organization_id = ?' : ''
+  const orgParams = orgId ? [orgId] : []
 
   try {
-    const [totalCalls] = await executeQuery(queries.totalCalls)
-    const [answerRate] = await executeQuery(queries.answerRate)
-    const [avgDuration] = await executeQuery(queries.avgDuration)
-    const [unresolvedCalls] = await executeQuery(queries.unresolvedCalls)
-    const [appointmentsBooked] = await executeQuery(queries.appointmentsBooked)
-    const [leadsQualified] = await executeQuery(queries.leadsQualified)
-    const [avgSatisfaction] = await executeQuery(queries.avgSatisfaction)
-    const [resolutionRate] = await executeQuery(queries.resolutionRate)
+    const [totalCalls] = await executeQuery(
+      `SELECT COUNT(*) as total FROM calls WHERE DATE(created_at) = CURDATE() ${orgFilter}`, orgParams
+    )
+    const [answerRate] = await executeQuery(
+      `SELECT ROUND(COALESCE(COUNT(CASE WHEN status = 'answered' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 0), 1) as rate FROM calls WHERE DATE(created_at) = CURDATE() ${orgFilter}`, orgParams
+    )
+    const [avgDuration] = await executeQuery(
+      `SELECT COALESCE(SEC_TO_TIME(AVG(TIME_TO_SEC(duration))), '00:00:00') as avg_duration FROM calls WHERE status = 'answered' AND DATE(created_at) = CURDATE() ${orgFilter}`, orgParams
+    )
+    const [unresolvedCalls] = await executeQuery(
+      `SELECT COUNT(*) as count FROM calls WHERE first_contact_resolution = FALSE AND DATE(created_at) = CURDATE() ${orgFilter}`, orgParams
+    )
+    const [appointmentsBooked] = await executeQuery(
+      `SELECT COUNT(*) as count FROM appointments WHERE DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ${orgFilter}`, orgParams
+    )
+    const [leadsQualified] = await executeQuery(
+      `SELECT COUNT(*) as count FROM leads WHERE status IN ('qualified', 'converted') AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ${orgFilter}`, orgParams
+    )
+    const [avgSatisfaction] = await executeQuery(
+      `SELECT ROUND(COALESCE(AVG(rating), 0), 1) as avg_rating FROM surveys WHERE survey_type = 'csat' AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) ${orgFilter}`, orgParams
+    )
+    const [resolutionRate] = await executeQuery(
+      `SELECT ROUND(COALESCE(COUNT(CASE WHEN first_contact_resolution = TRUE THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 0), 1) as rate FROM calls WHERE status = 'answered' AND DATE(created_at) = CURDATE() ${orgFilter}`, orgParams
+    )
 
     return {
       totalCalls: totalCalls?.total || 0,
@@ -117,120 +83,116 @@ export async function getDashboardStats() {
     }
   } catch (error) {
     console.error('Error fetching dashboard stats:', error)
-    // Return mock data if database fails
-    return {
-      totalCalls: Math.floor(Math.random() * 100) + 1200,
-      answerRate: (Math.random() * 5 + 92).toFixed(1),
-      avgDuration: `${Math.floor(Math.random() * 2) + 4}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
-      unresolvedCalls: Math.floor(Math.random() * 15) + 15,
-      appointmentsBooked: Math.floor(Math.random() * 20) + 80,
-      leadsQualified: Math.floor(Math.random() * 30) + 140,
-      avgSatisfaction: (Math.random() * 0.5 + 4.5).toFixed(1),
-      resolutionRate: (Math.random() * 5 + 85).toFixed(1),
-    }
+    throw error
   }
 }
 
-// Get recent calls for the activity feed
-export async function getRecentCalls(limit: number = 10) {
+// Recent calls for activity feed
+export async function getRecentCalls(limit: number = 10, orgId?: number) {
+  const orgFilter = orgId ? 'WHERE c.organization_id = ?' : ''
+  const params: any[] = orgId ? [orgId, limit] : [limit]
+
   const query = `
-    SELECT 
-      c.id,
-      c.caller_name,
-      c.caller_phone,
-      c.caller_email,
-      c.start_time,
-      c.duration,
-      c.status,
-      c.outcome,
-      c.sentiment,
-      c.intent,
+    SELECT c.id, c.caller_name, c.caller_phone, c.caller_email, c.start_time, c.duration,
+      c.status, c.outcome, c.sentiment, c.intent, c.transcript, c.ai_summary,
       c.first_contact_resolution,
       CASE 
         WHEN c.start_time >= NOW() - INTERVAL 1 MINUTE THEN 'Just now'
-        WHEN c.start_time >= NOW() - INTERVAL 1 HOUR THEN CONCAT(TIMESTAMPDIFF(MINUTE, c.start_time, NOW()), ' minutes ago')
+        WHEN c.start_time >= NOW() - INTERVAL 1 HOUR THEN CONCAT(TIMESTAMPDIFF(MINUTE, c.start_time, NOW()), ' min ago')
         WHEN c.start_time >= NOW() - INTERVAL 1 DAY THEN CONCAT(TIMESTAMPDIFF(HOUR, c.start_time, NOW()), ' hours ago')
-        ELSE DATE_FORMAT(c.start_time, '%M %d, %Y')
+        ELSE DATE_FORMAT(c.start_time, '%b %d, %Y')
       END as time_ago
-    FROM calls c
-    ORDER BY c.created_at DESC
-    LIMIT ?
+    FROM calls c ${orgFilter}
+    ORDER BY c.created_at DESC LIMIT ?
   `
-
-  try {
-    return await executeQuery(query, [limit])
-  } catch (error) {
-    console.error('Error fetching recent calls:', error)
-    // Return mock data if database fails
-    return [
-      {
-        id: 1,
-        caller_name: 'Sarah Johnson',
-        caller_phone: '+1-555-123-4567',
-        time_ago: '2 minutes ago',
-        duration: '00:04:32',
-        outcome: 'appointment_booked',
-        sentiment: 'positive',
-        intent: 'Schedule Service',
-        status: 'answered',
-      },
-      // ... more mock data
-    ]
-  }
+  return await executeQuery(query, params)
 }
 
-// Get hourly call volume data
-export async function getHourlyCallData() {
+// Hourly call volume for charts
+export async function getHourlyCallData(orgId?: number) {
+  const orgFilter = orgId ? 'AND organization_id = ?' : ''
+  const params = orgId ? [orgId] : []
+
   const query = `
-    SELECT 
-      HOUR(start_time) as hour,
+    SELECT HOUR(start_time) as hour,
       COUNT(*) as total_calls,
       COUNT(CASE WHEN status = 'answered' THEN 1 END) as answered,
       COUNT(CASE WHEN status = 'missed' THEN 1 END) as missed
-    FROM calls 
-    WHERE DATE(start_time) = CURDATE()
-    GROUP BY HOUR(start_time)
-    ORDER BY hour
+    FROM calls WHERE DATE(start_time) = CURDATE() ${orgFilter}
+    GROUP BY HOUR(start_time) ORDER BY hour
   `
-
-  try {
-    const results = await executeQuery(query)
-    return results.map((row: any) => ({
-      hour: `${row.hour}:00`,
-      calls: row.total_calls,
-      answered: row.answered,
-      missed: row.missed
-    }))
-  } catch (error) {
-    console.error('Error fetching hourly call data:', error)
-    return [] // Return empty array if database fails
-  }
+  const results = await executeQuery(query, params)
+  return results.map((row: any) => ({
+    hour: `${row.hour}:00`,
+    calls: row.total_calls,
+    answered: row.answered,
+    missed: row.missed,
+  }))
 }
 
-// Get contact information
-export async function getContacts(limit: number = 50) {
-  const query = `
-    SELECT 
-      id,
-      name,
-      company,
-      phone,
-      email,
-      total_calls,
-      status,
-      last_contact_date
-    FROM contacts
-    WHERE status = 'active'
-    ORDER BY last_contact_date DESC
-    LIMIT ?
-  `
+// Weekly call volume for charts
+export async function getWeeklyCallData(orgId?: number) {
+  const orgFilter = orgId ? 'AND c.organization_id = ?' : ''
+  const params = orgId ? [orgId, orgId, orgId] : []
 
-  try {
-    return await executeQuery(query, [limit])
-  } catch (error) {
-    console.error('Error fetching contacts:', error)
-    return []
-  }
+  const query = `
+    SELECT DATE_FORMAT(d.day, '%a') as day_name, d.day,
+      COALESCE(calls.total, 0) as calls,
+      COALESCE(appts.total, 0) as appointments,
+      COALESCE(lds.total, 0) as leads
+    FROM (
+      SELECT CURDATE() - INTERVAL n DAY as day
+      FROM (SELECT 0 n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6) nums
+    ) d
+    LEFT JOIN (SELECT DATE(created_at) as dt, COUNT(*) as total FROM calls WHERE DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ${orgFilter} GROUP BY dt) calls ON d.day = calls.dt
+    LEFT JOIN (SELECT DATE(created_at) as dt, COUNT(*) as total FROM appointments WHERE DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ${orgFilter} GROUP BY dt) appts ON d.day = appts.dt
+    LEFT JOIN (SELECT DATE(created_at) as dt, COUNT(*) as total FROM leads WHERE DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ${orgFilter} GROUP BY dt) lds ON d.day = lds.dt
+    ORDER BY d.day
+  `
+  return await executeQuery(query, params)
+}
+
+// Sentiment distribution for analytics
+export async function getSentimentData(orgId?: number) {
+  const orgFilter = orgId ? 'AND organization_id = ?' : ''
+  const params = orgId ? [orgId] : []
+
+  const query = `
+    SELECT sentiment, COUNT(*) as count
+    FROM calls WHERE sentiment IS NOT NULL AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) ${orgFilter}
+    GROUP BY sentiment
+  `
+  return await executeQuery(query, params)
+}
+
+// Intent distribution for analytics
+export async function getIntentData(orgId?: number) {
+  const orgFilter = orgId ? 'AND organization_id = ?' : ''
+  const params = orgId ? [orgId] : []
+
+  const query = `
+    SELECT intent, COUNT(*) as count
+    FROM calls WHERE intent IS NOT NULL AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) ${orgFilter}
+    GROUP BY intent ORDER BY count DESC LIMIT 10
+  `
+  return await executeQuery(query, params)
+}
+
+// Peak hours for analytics
+export async function getPeakHoursData(orgId?: number) {
+  const orgFilter = orgId ? 'AND organization_id = ?' : ''
+  const params = orgId ? [orgId] : []
+
+  const query = `
+    SELECT HOUR(start_time) as hour, COUNT(*) as calls
+    FROM calls WHERE DATE(start_time) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ${orgFilter}
+    GROUP BY HOUR(start_time) ORDER BY hour
+  `
+  const results = await executeQuery(query, params)
+  return results.map((row: any) => ({
+    hour: `${row.hour > 12 ? row.hour - 12 : row.hour}${row.hour >= 12 ? 'pm' : 'am'}`,
+    calls: row.calls,
+  }))
 }
 
 export default pool
