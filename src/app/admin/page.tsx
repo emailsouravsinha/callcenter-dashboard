@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Building, Users, Plus, Trash2, AlertCircle, CheckCircle, Copy, X } from 'lucide-react'
+import { Building, Users, Plus, Trash2, AlertCircle, CheckCircle, Copy, X, Phone } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -26,11 +26,24 @@ interface UserRecord {
   created_at: string
 }
 
+interface PhoneMapping {
+  id: number
+  organization_id: number
+  phone_number: string
+  vector_store_id: string
+  is_active: boolean
+  org_name: string
+  created_at: string
+}
+
+type TabId = 'organizations' | 'users' | 'phone-mappings'
+
 export default function AdminPage() {
   const { token, loading: authLoading } = useAuth()
-  const [activeTab, setActiveTab] = useState<'organizations' | 'users'>('organizations')
+  const [activeTab, setActiveTab] = useState<TabId>('organizations')
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [users, setUsers] = useState<UserRecord[]>([])
+  const [phoneMappings, setPhoneMappings] = useState<PhoneMapping[]>([])
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -45,12 +58,19 @@ export default function AdminPage() {
   })
   const [tempPassword, setTempPassword] = useState('')
 
+  // Phone mapping form
+  const [showMappingForm, setShowMappingForm] = useState(false)
+  const [mappingForm, setMappingForm] = useState({
+    organizationId: '', phoneNumber: '', vectorStoreId: '',
+  })
+
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
 
   useEffect(() => {
     if (token) {
       fetchOrganizations()
       fetchUsers()
+      fetchPhoneMappings()
     }
   }, [token])
 
@@ -67,6 +87,14 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/users', { headers })
       const data = await res.json()
       if (data.users) setUsers(data.users)
+    } catch { /* ignore */ }
+  }
+
+  const fetchPhoneMappings = async () => {
+    try {
+      const res = await fetch('/api/admin/phone-mappings', { headers })
+      const data = await res.json()
+      if (data.mappings) setPhoneMappings(data.mappings)
     } catch { /* ignore */ }
   }
 
@@ -123,6 +151,39 @@ export default function AdminPage() {
     } catch { setMessage({ type: 'error', text: 'Failed to deactivate user' }) }
   }
 
+  const handleCreateMapping = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/phone-mappings', {
+        method: 'POST', headers,
+        body: JSON.stringify(mappingForm),
+      })
+      const data = await res.json()
+      if (!res.ok) { setMessage({ type: 'error', text: data.error }); return }
+      setMessage({ type: 'success', text: `Phone mapping for ${mappingForm.phoneNumber} created` })
+      setMappingForm({ organizationId: '', phoneNumber: '', vectorStoreId: '' })
+      setShowMappingForm(false)
+      fetchPhoneMappings()
+    } catch { setMessage({ type: 'error', text: 'Failed to create phone mapping' }) }
+    finally { setLoading(false) }
+  }
+
+  const handleDeleteMapping = async (mappingId: number) => {
+    if (!confirm('Are you sure you want to deactivate this phone mapping?')) return
+    try {
+      const res = await fetch('/api/admin/phone-mappings', {
+        method: 'DELETE', headers,
+        body: JSON.stringify({ mappingId }),
+      })
+      if (res.ok) {
+        setMessage({ type: 'success', text: 'Phone mapping deactivated' })
+        fetchPhoneMappings()
+      }
+    } catch { setMessage({ type: 'error', text: 'Failed to deactivate phone mapping' }) }
+  }
+
   const autoSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
   if (authLoading) {
@@ -142,7 +203,7 @@ export default function AdminPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold mb-1">Admin Panel</h1>
-          <p className="text-gray-600">Manage customer organizations and users</p>
+          <p className="text-gray-600">Manage customer organizations, users, and phone mappings</p>
         </div>
 
         {/* Message */}
@@ -173,8 +234,9 @@ export default function AdminPage() {
         <div className="border-b border-gray-200">
           <nav className="flex gap-8">
             {[
-              { id: 'organizations' as const, label: 'Organizations', icon: Building },
-              { id: 'users' as const, label: 'Users', icon: Users },
+              { id: 'organizations' as TabId, label: 'Organizations', icon: Building },
+              { id: 'users' as TabId, label: 'Users', icon: Users },
+              { id: 'phone-mappings' as TabId, label: 'Phone Mappings', icon: Phone },
             ].map((tab) => {
               const Icon = tab.icon
               return (
@@ -388,6 +450,121 @@ export default function AdminPage() {
                           <td className="px-6 py-4">
                             {u.is_active && (
                               <button onClick={() => handleDeleteUser(u.id)} className="text-red-600 hover:text-red-700" title="Deactivate user">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Phone Mappings Tab */}
+        {activeTab === 'phone-mappings' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Phone Mappings ({phoneMappings.length})</h2>
+                <p className="text-sm text-gray-500 mt-1">Map Twilio phone numbers to organizations and their knowledge base</p>
+              </div>
+              <button onClick={() => setShowMappingForm(!showMappingForm)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium text-sm">
+                <Plus className="w-4 h-4" /> Add Phone Mapping
+              </button>
+            </div>
+
+            {showMappingForm && (
+              <form onSubmit={handleCreateMapping} className="bg-white rounded-xl shadow p-6 space-y-4 border border-purple-100">
+                <h3 className="font-semibold text-gray-900">New Phone Mapping</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Organization</label>
+                    <select value={mappingForm.organizationId}
+                      onChange={(e) => setMappingForm({ ...mappingForm, organizationId: e.target.value })}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                      <option value="">Select organization</option>
+                      {organizations.map((org) => (
+                        <option key={org.id} value={org.id}>{org.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Twilio Phone Number</label>
+                    <input type="text" value={mappingForm.phoneNumber}
+                      onChange={(e) => setMappingForm({ ...mappingForm, phoneNumber: e.target.value })}
+                      placeholder="+1XXXXXXXXXX" required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                    <p className="text-xs text-gray-400 mt-1">E.164 format (e.g. +15551234567)</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Vector Store ID</label>
+                    <input type="text" value={mappingForm.vectorStoreId}
+                      onChange={(e) => setMappingForm({ ...mappingForm, vectorStoreId: e.target.value })}
+                      placeholder="vectorstore_acme" required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                    <p className="text-xs text-gray-400 mt-1">FAISS knowledge base folder name for this customer</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button type="button" onClick={() => setShowMappingForm(false)} className="px-4 py-2 text-gray-600 hover:text-gray-900">Cancel</button>
+                  <button type="submit" disabled={loading}
+                    className="px-6 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 font-medium">
+                    {loading ? 'Creating...' : 'Create Mapping'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            <div className="bg-white rounded-xl shadow overflow-hidden">
+              {phoneMappings.length === 0 ? (
+                <div className="px-6 py-12 text-center">
+                  <Phone className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No phone mappings yet. Add one to connect a Twilio number to an organization.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Organization</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Twilio Number</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vector Store</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {phoneMappings.map((m) => (
+                        <tr key={m.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                                <Building className="w-5 h-5 text-purple-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{m.org_name}</p>
+                                <p className="text-xs text-gray-500">Org ID: {m.organization_id}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm font-mono text-gray-900">{m.phone_number}</td>
+                          <td className="px-6 py-4 text-sm font-mono text-gray-600">{m.vector_store_id}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${m.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              {m.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{new Date(m.created_at).toLocaleDateString()}</td>
+                          <td className="px-6 py-4">
+                            {m.is_active && (
+                              <button onClick={() => handleDeleteMapping(m.id)} className="text-red-600 hover:text-red-700" title="Deactivate mapping">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             )}
